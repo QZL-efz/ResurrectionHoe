@@ -367,28 +367,103 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
             }
             
             Location center = player.getLocation();
-            int grown = 0;
-
-            for (int x = -3; x <= 3; x++) {
+            boolean hasGrowable = false;
+            
+            // 先检查5*5*5内有无可催熟的方块
+            for (int x = -2; x <= 2; x++) {
                 for (int y = -2; y <= 2; y++) {
-                    for (int z = -3; z <= 3; z++) {
+                    for (int z = -2; z <= 2; z++) {
                         Block block = center.getWorld().getBlockAt(center.getBlockX() + x, center.getBlockY() + y, center.getBlockZ() + z);
                         if (isGrowable(block)) {
-                            growCrop(block);
-                            spawnGrowthParticles(block);
-                            grown++;
+                            hasGrowable = true;
+                            break;
+                        }
+                    }
+                    if (hasGrowable) break;
+                }
+                if (hasGrowable) break;
+            }
+            
+            if (!hasGrowable) {
+                player.sendMessage("§c周围好像没有可以被催熟的作物或方块啊");
+                fertilizerCooldowns.put(playerUUID, currentTime);
+                return;
+            }
+            
+            // 尝试施加骨粉效果
+            boolean applied = false;
+            for (int x = -2; x <= 2; x++) {
+                for (int y = -2; y <= 2; y++) {
+                    for (int z = -2; z <= 2; z++) {
+                        Block block = center.getWorld().getBlockAt(center.getBlockX() + x, center.getBlockY() + y, center.getBlockZ() + z);
+                        if (isGrowable(block)) {
+                            // 尝试用骨粉效果
+                            ItemStack boneMeal = new ItemStack(Material.BONE_MEAL);
+                            PlayerInteractEvent fakeEvent = new PlayerInteractEvent(
+                                player, 
+                                Action.RIGHT_CLICK_BLOCK, 
+                                boneMeal, 
+                                block, 
+                                org.bukkit.block.BlockFace.UP
+                            );
+                            getServer().getPluginManager().callEvent(fakeEvent);
+                            
+                            // 施加骨粉效果
+                            try {
+                                Object blockData = block.getBlockData();
+                                if (blockData instanceof Ageable) {
+                                    Ageable ageable = (Ageable) blockData;
+                                    ageable.setAge(ageable.getMaximumAge());
+                                    block.setBlockData(ageable);
+                                    applied = true;
+                                } else {
+                                    // 尝试使用反射方法
+                                    Class<?> dataClass = blockData.getClass();
+                                    java.lang.reflect.Method getMaxAgeMethod = null;
+                                    java.lang.reflect.Method setAgeMethod = null;
+                                    
+                                    for (java.lang.reflect.Method m : dataClass.getMethods()) {
+                                        if (m.getName().equals("getMaximumAge") && m.getParameterCount() == 0) {
+                                            getMaxAgeMethod = m;
+                                        }
+                                        if (m.getName().equals("setAge") && m.getParameterCount() == 1) {
+                                            setAgeMethod = m;
+                                        }
+                                    }
+                                    
+                                    if (getMaxAgeMethod != null && setAgeMethod != null) {
+                                        int maxAge = (int) getMaxAgeMethod.invoke(blockData);
+                                        setAgeMethod.invoke(blockData, maxAge);
+                                        block.setBlockData((org.bukkit.block.data.BlockData) blockData);
+                                        applied = true;
+                                    }
+                                }
+                            } catch (Exception e) {
+                                getLogger().warning("无法施加骨粉效果: " + e.getMessage());
+                            }
                         }
                     }
                 }
             }
-
-            if (grown > 0) {
-                item.setAmount(item.getAmount() - 1);
-                player.getInventory().setItemInMainHand(item);
-                fertilizerCooldowns.put(playerUUID, currentTime);
-            } else {
-                fertilizerCooldowns.put(playerUUID, currentTime);
+            
+            // 释放粒子效果
+            for (int x = -2; x <= 2; x++) {
+                for (int y = -2; y <= 2; y++) {
+                    for (int z = -2; z <= 2; z++) {
+                        Block block = center.getWorld().getBlockAt(center.getBlockX() + x, center.getBlockY() + y, center.getBlockZ() + z);
+                        if (isGrowable(block)) {
+                            Location particleLoc = block.getLocation().add(0.5, 0.5, 0.5);
+                            block.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, particleLoc, 10, 0.3, 0.3, 0.3, 0.1);
+                            block.getWorld().spawnParticle(Particle.HEART, particleLoc, 5, 0.3, 0.3, 0.3, 0.1);
+                        }
+                    }
+                }
             }
+            
+            // 消耗金坷垃
+            item.setAmount(item.getAmount() - 1);
+            player.getInventory().setItemInMainHand(item);
+            fertilizerCooldowns.put(playerUUID, currentTime);
         } else if (isPathShovel(item)) {
             Block clickedBlock = event.getClickedBlock();
             Location center = clickedBlock.getLocation();
@@ -432,7 +507,41 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                type == Material.COCOA ||
                type.name().endsWith("_SAPLING") ||
                type == Material.MELON_STEM ||
-               type == Material.PUMPKIN_STEM;
+               type == Material.PUMPKIN_STEM ||
+               type == Material.SWEET_BERRY_BUSH ||
+               type == Material.BAMBOO ||
+               type == Material.BAMBOO_SAPLING ||
+               type == Material.SEAGRASS ||
+               type == Material.TALL_SEAGRASS ||
+               type == Material.KELP ||
+               type == Material.KELP_PLANT ||
+               type == Material.TWISTING_VINES ||
+               type == Material.TWISTING_VINES_PLANT ||
+               type == Material.WEEPING_VINES ||
+               type == Material.WEEPING_VINES_PLANT ||
+               type == Material.CAVE_VINES ||
+               type == Material.CAVE_VINES_PLANT ||
+               type == Material.GLOW_LICHEN ||
+               type == Material.MOSS_CARPET ||
+               type == Material.MOSS_BLOCK ||
+               type == Material.MYCELIUM ||
+               type == Material.PODZOL ||
+               type == Material.DIRT ||
+               type == Material.GRASS_BLOCK ||
+               type == Material.DIRT_PATH ||
+               type == Material.COARSE_DIRT ||
+               type == Material.ROOTED_DIRT ||
+               type == Material.FARMLAND ||
+               type == Material.FLOWERING_AZALEA ||
+               type == Material.AZALEA ||
+               type.name().endsWith("_WART") ||
+               type == Material.CRIMSON_FUNGUS ||
+               type == Material.WARPED_FUNGUS ||
+               type == Material.CRIMSON_ROOTS ||
+               type == Material.WARPED_ROOTS ||
+               type == Material.NETHER_SPROUTS ||
+               type == Material.VINE ||
+               type == Material.GLOW_BERRIES;
     }
 
     private void growCrop(Block block) {
