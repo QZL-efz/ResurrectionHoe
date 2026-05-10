@@ -36,7 +36,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ResurrectionHoe extends JavaPlugin implements Listener {
@@ -165,7 +164,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                         itemName = "寻觅之镰";
                     } else if (itemType.equals("sword")) {
                         item = createPercentageSword();
-                        itemName = "百分比之剑";
+                        itemName = "百分比金剑";
                     } else {
                         item = createPathShovel();
                         itemName = "引路之锹";
@@ -354,13 +353,13 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
     }
 
     private ItemStack createPercentageSword() {
-        ItemStack sword = new ItemStack(Material.IRON_SWORD);
+        ItemStack sword = new ItemStack(Material.GOLDEN_SWORD);
         ItemMeta meta = sword.getItemMeta();
 
-        meta.setDisplayName(ChatColor.GOLD + "百分比之剑");
+        meta.setDisplayName(ChatColor.GOLD + "百分比金剑");
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + "攻击时额外造成");
-        lore.add(ChatColor.RED + "目标最大生命值10%");
+        lore.add(ChatColor.RED + "目标最大生命值8%");
         lore.add(ChatColor.GRAY + "的伤害！");
         meta.setLore(lore);
         meta.addEnchant(Enchantment.LOOTING, 3, true);
@@ -600,7 +599,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         if (!(victim instanceof LivingEntity livingEntity)) return;
 
         double maxHealth = livingEntity.getMaxHealth();
-        double extraDamage = maxHealth * 0.1;
+        double extraDamage = maxHealth * 0.08;
         event.setDamage(event.getDamage() + extraDamage);
     }
 
