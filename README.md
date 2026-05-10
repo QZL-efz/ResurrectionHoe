@@ -52,7 +52,7 @@
 | `/rh`                                                                | 所有玩家 | 显示插件信息        |
 | `/rh info`                                                           | 所有玩家 | 显示插件信息        |
 | `/rh reload`                                                         | OP   | 重载插件          |
-| `/rh give \<hoe \| axe  \| shovel \| scythe \| sword> \[玩家名] \[数量]\` | OP   | 获取物品（玩家和数量可选） |
+| `/rh give <hoe \| axe  \| shovel \| scythe \| sword> [玩家名] [数量]` | OP   | 获取物品（玩家和数量可选） |
 
 ### 指令示例
 
