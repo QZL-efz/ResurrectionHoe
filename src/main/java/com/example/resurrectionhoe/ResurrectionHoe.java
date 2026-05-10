@@ -291,6 +291,23 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         }
     }
 
+    private boolean canPlayerModifyBlock(Player player, Block block) {
+        if (player.hasPermission("resurrectionhoe.bypass-protection")) {
+            return true;
+        }
+        
+        org.bukkit.event.block.BlockBreakEvent breakEvent = new org.bukkit.event.block.BlockBreakEvent(block, player);
+        getServer().getPluginManager().callEvent(breakEvent);
+        if (breakEvent.isCancelled()) {
+            return false;
+        }
+        
+        org.bukkit.inventory.ItemStack itemInHand = player.getInventory().getItemInMainHand();
+        org.bukkit.event.block.BlockPlaceEvent placeEvent = new org.bukkit.event.block.BlockPlaceEvent(block, block.getState(), block.getRelative(org.bukkit.block.BlockFace.DOWN), itemInHand, player, true);
+        getServer().getPluginManager().callEvent(placeEvent);
+        return !placeEvent.isCancelled();
+    }
+
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
@@ -316,16 +333,18 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                             Block above = block.getRelative(0, 1, 0);
                             Material aboveType = above.getType();
                             
-                            if (aboveType == Material.AIR || isFlowerOrGrass(aboveType)) {
-                                if (isFlowerOrGrass(aboveType)) {
+                            if ((aboveType == Material.AIR || isFlowerOrGrass(aboveType)) && canPlayerModifyBlock(player, block)) {
+                                if (isFlowerOrGrass(aboveType) && canPlayerModifyBlock(player, above)) {
                                     spawnBlockBreakParticles(above);
                                     above.breakNaturally();
+                                } else if (isFlowerOrGrass(aboveType)) {
+                                    continue;
                                 }
                                 block.setType(Material.FARMLAND);
                                 markResurrectionFarmland(block);
                                 farmlandsToMoisturize.add(block);
                             }
-                        } else if (type == Material.FARMLAND) {
+                        } else if (type == Material.FARMLAND && canPlayerModifyBlock(player, block)) {
                             markResurrectionFarmland(block);
                             farmlandsToMoisturize.add(block);
                         }
@@ -388,10 +407,12 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                             Block above = block.getRelative(0, 1, 0);
                             Material aboveType = above.getType();
                             
-                            if (aboveType == Material.AIR || isFlowerOrGrass(aboveType)) {
-                                if (isFlowerOrGrass(aboveType)) {
+                            if ((aboveType == Material.AIR || isFlowerOrGrass(aboveType)) && canPlayerModifyBlock(player, block)) {
+                                if (isFlowerOrGrass(aboveType) && canPlayerModifyBlock(player, above)) {
                                     spawnBlockBreakParticles(above);
                                     above.breakNaturally();
+                                } else if (isFlowerOrGrass(aboveType)) {
+                                    continue;
                                 }
                                 block.setType(Material.DIRT_PATH);
                             }

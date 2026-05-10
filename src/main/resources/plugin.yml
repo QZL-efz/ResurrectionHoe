@@ -21,3 +21,6 @@ permissions:
   resurrectionhoe.give:
     description: 获取复生之锄和金坷垃
     default: op
+  resurrectionhoe.bypass-protection:
+    description: 绕过领地保护检查
+    default: op
