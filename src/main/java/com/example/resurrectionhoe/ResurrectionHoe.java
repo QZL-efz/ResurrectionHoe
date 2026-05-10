@@ -1,4 +1,4 @@
-package com.example.myplugin;
+package com.example.resurrectionhoe;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -34,7 +34,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class MyPlugin extends JavaPlugin implements Listener {
+public class ResurrectionHoe extends JavaPlugin implements Listener {
 
     private NamespacedKey hoeKey;
     private NamespacedKey fertilizerKey;
@@ -62,8 +62,8 @@ public class MyPlugin extends JavaPlugin implements Listener {
                         sender.sendMessage("§c你没有权限执行此指令！");
                         return true;
                     }
-                    getServer().getPluginManager().disablePlugin(MyPlugin.this);
-                    getServer().getPluginManager().enablePlugin(MyPlugin.this);
+                    getServer().getPluginManager().disablePlugin(ResurrectionHoe.this);
+                    getServer().getPluginManager().enablePlugin(ResurrectionHoe.this);
                     sender.sendMessage("§a插件已重载！");
                     return true;
                 }

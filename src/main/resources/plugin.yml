@@ -1,6 +1,6 @@
 name: ResurrectionHoe
 version: ${project.version}
-main: com.example.myplugin.MyPlugin
+main: com.example.resurrectionhoe.ResurrectionHoe
 api-version: '1.21'
 author: YourName
 description: 地狱复生之锄插件
