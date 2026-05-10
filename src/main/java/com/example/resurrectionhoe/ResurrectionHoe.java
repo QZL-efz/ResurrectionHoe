@@ -227,7 +227,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
     }
 
     private ItemStack createGoldenFertilizer() {
-        ItemStack fertilizer = new ItemStack(Material.BONE_MEAL);
+        ItemStack fertilizer = new ItemStack(Material.GOLD_NUGGET);
         ItemMeta meta = fertilizer.getItemMeta();
         
         meta.setDisplayName(ChatColor.GOLD + "金坷垃");
@@ -340,8 +340,6 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
             }
             event.setCancelled(true);
         } else if (isGoldenFertilizer(item)) {
-            event.setCancelled(true);
-            
             UUID playerUUID = player.getUniqueId();
             long currentTime = System.currentTimeMillis();
             Long lastUse = fertilizerCooldowns.get(playerUUID);
@@ -390,7 +388,11 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                             Block above = block.getRelative(0, 1, 0);
                             Material aboveType = above.getType();
                             
-                            if (aboveType == Material.AIR) {
+                            if (aboveType == Material.AIR || isFlowerOrGrass(aboveType)) {
+                                if (isFlowerOrGrass(aboveType)) {
+                                    spawnBlockBreakParticles(above);
+                                    above.breakNaturally();
+                                }
                                 block.setType(Material.DIRT_PATH);
                             }
                         }
