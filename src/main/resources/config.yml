@@ -1,0 +1,6 @@
+# ResurrectionHoe 配置文件
+
+# 是否启用耕地不干涸功能
+# true - 启用，复生之锄生成的耕地不会干涸
+# false - 禁用，所有耕地行为与普通耕地一致
+enable-farmland-moisture: true

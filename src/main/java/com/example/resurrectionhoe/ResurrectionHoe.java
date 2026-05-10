@@ -13,6 +13,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -40,9 +41,13 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
     private NamespacedKey fertilizerKey;
     private ConcurrentHashMap<String, Boolean> resurrectionFarmlands;
     private String buildTime;
+    private boolean enableFarmlandMoisture;
 
     @Override
     public void onEnable() {
+        saveDefaultConfig();
+        reloadConfigValues();
+
         hoeKey = new NamespacedKey(this, "resurrection_hoe");
         fertilizerKey = new NamespacedKey(this, "golden_fertilizer");
         resurrectionFarmlands = new ConcurrentHashMap<>();
@@ -62,9 +67,9 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                         sender.sendMessage("§c你没有权限执行此指令！");
                         return true;
                     }
-                    getServer().getPluginManager().disablePlugin(ResurrectionHoe.this);
-                    getServer().getPluginManager().enablePlugin(ResurrectionHoe.this);
-                    sender.sendMessage("§a插件已重载！");
+                    reloadConfig();
+                    reloadConfigValues();
+                    sender.sendMessage("§a插件配置已重载！");
                     return true;
                 }
                 if (args[0].equalsIgnoreCase("hoe")) {
@@ -123,12 +128,19 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         });
     }
 
+    private void reloadConfigValues() {
+        FileConfiguration config = getConfig();
+        enableFarmlandMoisture = config.getBoolean("enable-farmland-moisture", true);
+        getLogger().info("耕地不干涸功能: " + (enableFarmlandMoisture ? "启用" : "禁用"));
+    }
+
     private void showInfo(CommandSender sender) {
         sender.sendMessage("§6═══════════════════════════════");
         sender.sendMessage("§e  ResurrectionHoe §f- §a复生之锄");
         sender.sendMessage("");
         sender.sendMessage("§b  版本: §f" + getDescription().getVersion());
         sender.sendMessage("§b  构建时间: §f" + buildTime);
+        sender.sendMessage("§b  耕地不干涸: §f" + (enableFarmlandMoisture ? "§a启用" : "§c禁用"));
         sender.sendMessage("");
         sender.sendMessage("§7  指令:");
         sender.sendMessage("§f  /rh info §7- §f显示插件信息");
@@ -143,11 +155,15 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         ItemMeta meta = hoe.getItemMeta();
         
         meta.setDisplayName(ChatColor.GOLD + "复生之锄");
-        meta.setLore(Arrays.asList(
-                ChatColor.GRAY + "右键地面使用",
-                ChatColor.BLUE + "可在5×5范围内耕地",
-                ChatColor.DARK_PURPLE + "生成的耕地不会干涸"
-        ));
+        
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.GRAY + "右键地面使用");
+        lore.add(ChatColor.BLUE + "可在5×5范围内耕地");
+        if (enableFarmlandMoisture) {
+            lore.add(ChatColor.DARK_PURPLE + "生成的耕地不会干涸");
+        }
+        meta.setLore(lore);
+        
         meta.addEnchant(Enchantment.FORTUNE, 3, true);
         meta.setUnbreakable(true);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
@@ -195,7 +211,9 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
     }
 
     private void markResurrectionFarmland(Block block) {
-        resurrectionFarmlands.put(getBlockKey(block), true);
+        if (enableFarmlandMoisture) {
+            resurrectionFarmlands.put(getBlockKey(block), true);
+        }
     }
 
     @EventHandler
@@ -240,8 +258,10 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                 }
             }
 
-            for (Block farmland : farmlandsToMoisturize) {
-                setFarmlandMoisture(farmland, 7);
+            if (enableFarmlandMoisture) {
+                for (Block farmland : farmlandsToMoisturize) {
+                    setFarmlandMoisture(farmland, 7);
+                }
             }
             event.setCancelled(true);
         } else if (isGoldenFertilizer(item)) {
@@ -322,6 +342,8 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onBlockPhysics(BlockPhysicsEvent event) {
+        if (!enableFarmlandMoisture) return;
+        
         Block block = event.getBlock();
         if (block.getType() == Material.FARMLAND && isResurrectionFarmland(block)) {
             setFarmlandMoisture(block, 7);
