@@ -15,12 +15,15 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPhysicsEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -42,8 +45,8 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
     private NamespacedKey axeKey;
     private NamespacedKey shovelKey;
     private NamespacedKey scytheKey;
+    private NamespacedKey swordKey;
     private ConcurrentHashMap<String, Boolean> resurrectionFarmlands;
-    private ConcurrentHashMap<UUID, Long> axeCooldowns;
     private boolean enableFarmlandMoisture;
     private double scytheDropChance;
     private List<LootItem> scytheLootTable;
@@ -70,8 +73,8 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         axeKey = new NamespacedKey(this, "regenerative_axe");
         shovelKey = new NamespacedKey(this, "path_shovel");
         scytheKey = new NamespacedKey(this, "seekers_scythe");
+        swordKey = new NamespacedKey(this, "percentage_sword");
         resurrectionFarmlands = new ConcurrentHashMap<>();
-        axeCooldowns = new ConcurrentHashMap<>();
         random = new Random();
         getLogger().info("ResurrectionHoe 插件已启用！");
         getServer().getPluginManager().registerEvents(this, this);
@@ -99,12 +102,12 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                         return true;
                     }
                     if (args.length < 2) {
-                        sender.sendMessage("§c用法: /rh give <hoe|axe|shovel|scythe> [玩家名] [数量]");
+                        sender.sendMessage("§c用法: /rh give <hoe|axe|shovel|scythe|sword> [玩家名] [数量]");
                         return true;
                     }
                     String itemType = args[1].toLowerCase();
-                    if (!itemType.equals("hoe") && !itemType.equals("axe") && !itemType.equals("shovel") && !itemType.equals("scythe")) {
-                        sender.sendMessage("§c无效的物品类型！请使用 hoe, axe, shovel 或 scythe");
+                    if (!itemType.equals("hoe") && !itemType.equals("axe") && !itemType.equals("shovel") && !itemType.equals("scythe") && !itemType.equals("sword")) {
+                        sender.sendMessage("§c无效的物品类型！请使用 hoe, axe, shovel, scythe 或 sword");
                         return true;
                     }
                     Player targetPlayer;
@@ -160,6 +163,9 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                     } else if (itemType.equals("scythe")) {
                         item = createSeekersScythe();
                         itemName = "寻觅之镰";
+                    } else if (itemType.equals("sword")) {
+                        item = createPercentageSword();
+                        itemName = "百分比之剑";
                     } else {
                         item = createPathShovel();
                         itemName = "引路之锹";
@@ -197,6 +203,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                     completions.add("axe");
                     completions.add("shovel");
                     completions.add("scythe");
+                    completions.add("sword");
                 } else if (args.length == 3 && args[0].equalsIgnoreCase("give") && sender.hasPermission("resurrectionhoe.give")) {
                     for (Player player : getServer().getOnlinePlayers()) {
                         completions.add(player.getName());
@@ -283,7 +290,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         sender.sendMessage("§7  指令:");
         sender.sendMessage("§f  /rh info §7- §f显示插件信息");
         sender.sendMessage("§f  /rh reload §7- §f重载插件（OP）");
-        sender.sendMessage("§f  /rh give <hoe|axe|shovel|scythe> [玩家名] [数量] §7- §f获取物品（OP）");
+        sender.sendMessage("§f  /rh give <hoe|axe|shovel|scythe|sword> [玩家名] [数量] §7- §f获取物品（OP）");
         sender.sendMessage("§6═══════════════════════════════");
     }
 
@@ -316,10 +323,8 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
 
         meta.setDisplayName(ChatColor.GOLD + "可再生石斧");
         List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.GRAY + "破坏树木时可连锁破坏");
-        lore.add(ChatColor.GRAY + "破坏后会在根部生成树苗");
-        lore.add(ChatColor.GRAY + "对巨型树木会使斧头断裂！");
-        lore.add(ChatColor.DARK_RED + "5秒冷却");
+        lore.add(ChatColor.GRAY + "右键木头方块时");
+        lore.add(ChatColor.GRAY + "直接掉落该木头！");
         meta.setLore(lore);
         meta.addEnchant(Enchantment.EFFICIENCY, 3, true);
         meta.setUnbreakable(true);
@@ -346,6 +351,26 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
 
         scythe.setItemMeta(meta);
         return scythe;
+    }
+
+    private ItemStack createPercentageSword() {
+        ItemStack sword = new ItemStack(Material.IRON_SWORD);
+        ItemMeta meta = sword.getItemMeta();
+
+        meta.setDisplayName(ChatColor.GOLD + "百分比之剑");
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.GRAY + "基础伤害: 1");
+        lore.add(ChatColor.GRAY + "攻击时额外造成");
+        lore.add(ChatColor.RED + "目标最大生命值10%");
+        lore.add(ChatColor.GRAY + "的伤害！");
+        meta.setLore(lore);
+        meta.addEnchant(Enchantment.LOOTING, 3, true);
+        meta.setUnbreakable(true);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        meta.getPersistentDataContainer().set(swordKey, PersistentDataType.BYTE, (byte) 1);
+
+        sword.setItemMeta(meta);
+        return sword;
     }
 
     private ItemStack createPathShovel() {
@@ -381,6 +406,11 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         return item.getItemMeta().getPersistentDataContainer().has(scytheKey, PersistentDataType.BYTE);
     }
 
+    private boolean isPercentageSword(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return false;
+        return item.getItemMeta().getPersistentDataContainer().has(swordKey, PersistentDataType.BYTE);
+    }
+
     private boolean isPathShovel(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return false;
         return item.getItemMeta().getPersistentDataContainer().has(shovelKey, PersistentDataType.BYTE);
@@ -409,14 +439,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
 
         org.bukkit.event.block.BlockBreakEvent breakEvent = new org.bukkit.event.block.BlockBreakEvent(block, player);
         getServer().getPluginManager().callEvent(breakEvent);
-        if (breakEvent.isCancelled()) {
-            return false;
-        }
-
-        org.bukkit.inventory.ItemStack itemInHand = player.getInventory().getItemInMainHand();
-        org.bukkit.event.block.BlockPlaceEvent placeEvent = new org.bukkit.event.block.BlockPlaceEvent(block, block.getState(), block.getRelative(org.bukkit.block.BlockFace.DOWN), itemInHand, player, true);
-        getServer().getPluginManager().callEvent(placeEvent);
-        return !placeEvent.isCancelled();
+        return !breakEvent.isCancelled();
     }
 
     private boolean isGrassVariant(Material material) {
@@ -424,6 +447,36 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                material == Material.TALL_GRASS ||
                material == Material.FERN ||
                material == Material.LARGE_FERN;
+    }
+
+    private boolean isLog(Material material) {
+        return material.name().endsWith("_LOG") ||
+               material == Material.OAK_WOOD ||
+               material == Material.BIRCH_WOOD ||
+               material == Material.SPRUCE_WOOD ||
+               material == Material.JUNGLE_WOOD ||
+               material == Material.ACACIA_WOOD ||
+               material == Material.DARK_OAK_WOOD ||
+               material == Material.MANGROVE_WOOD ||
+               material == Material.CHERRY_WOOD ||
+               material == Material.BAMBOO_BLOCK ||
+               material == Material.STRIPPED_OAK_LOG ||
+               material == Material.STRIPPED_BIRCH_LOG ||
+               material == Material.STRIPPED_SPRUCE_LOG ||
+               material == Material.STRIPPED_JUNGLE_LOG ||
+               material == Material.STRIPPED_ACACIA_LOG ||
+               material == Material.STRIPPED_DARK_OAK_LOG ||
+               material == Material.STRIPPED_MANGROVE_LOG ||
+               material == Material.STRIPPED_CHERRY_LOG ||
+               material == Material.STRIPPED_BAMBOO_BLOCK ||
+               material == Material.OAK_LOG ||
+               material == Material.BIRCH_LOG ||
+               material == Material.SPRUCE_LOG ||
+               material == Material.JUNGLE_LOG ||
+               material == Material.ACACIA_LOG ||
+               material == Material.DARK_OAK_LOG ||
+               material == Material.MANGROVE_LOG ||
+               material == Material.CHERRY_LOG;
     }
 
     @EventHandler
@@ -477,14 +530,6 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
             }
             event.setCancelled(true);
         } else if (isRegenerativeAxe(item)) {
-            UUID playerUUID = player.getUniqueId();
-            long currentTime = System.currentTimeMillis();
-            Long lastUse = axeCooldowns.get(playerUUID);
-            if (lastUse != null && currentTime - lastUse < 5000) {
-                player.sendMessage("§c斧头还在冷却中（" + (5 - (currentTime - lastUse) / 1000) + "秒）！");
-                return;
-            }
-
             Block clickedBlock = event.getClickedBlock();
             if (clickedBlock == null) return;
 
@@ -497,47 +542,10 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                 return;
             }
 
-            Set<Block> treeBlocks = findTreeBlocks(clickedBlock);
-
-            if (treeBlocks.isEmpty()) {
-                return;
-            }
-
-            boolean isGiantTree = isGiantTreeTrunk(clickedBlock);
-
-            if (isGiantTree) {
-                player.sendMessage("§c你的斧头'啪'地一声断了！");
-                player.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
-                axeCooldowns.put(playerUUID, currentTime);
-                event.setCancelled(true);
-                return;
-            }
-
-            Material saplingType = getSaplingType(type);
-            Block lowestLog = findLowestLogBlock(treeBlocks);
-
-            for (Block block : treeBlocks) {
-                if (canPlayerModifyBlock(player, block)) {
-                    spawnBlockBreakParticles(block);
-                    block.breakNaturally();
-                }
-            }
-
-            if (lowestLog != null && saplingType != null) {
-                boolean hasLeaves = false;
-                for (Block block : treeBlocks) {
-                    if (isLeaves(block.getType())) {
-                        hasLeaves = true;
-                        break;
-                    }
-                }
-
-                if (hasLeaves) {
-                    lowestLog.getWorld().dropItemNaturally(lowestLog.getLocation(), new ItemStack(saplingType));
-                }
-            }
-
-            axeCooldowns.put(playerUUID, currentTime);
+            clickedBlock.getWorld().dropItemNaturally(clickedBlock.getLocation(), new ItemStack(type));
+            clickedBlock.setType(Material.AIR);
+            clickedBlock.getWorld().spawnParticle(Particle.BLOCK, clickedBlock.getLocation().add(0.5, 0.5, 0.5), 20, 0.3, 0.3, 0.3, 0.05, clickedBlock.getBlockData());
+            clickedBlock.getWorld().playSound(clickedBlock.getLocation(), Sound.BLOCK_WOOD_BREAK, 1.0f, 1.0f);
             event.setCancelled(true);
         } else if (isPathShovel(item)) {
             Block clickedBlock = event.getClickedBlock();
@@ -575,6 +583,22 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
     }
 
     @EventHandler
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        Entity damager = event.getDamager();
+        if (!(damager instanceof Player player)) return;
+
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (!isPercentageSword(item)) return;
+
+        Entity victim = event.getEntity();
+        if (!(victim instanceof LivingEntity livingEntity)) return;
+
+        double maxHealth = livingEntity.getMaxHealth();
+        double extraDamage = maxHealth * 0.1;
+        event.setDamage(event.getDamage() + extraDamage);
+    }
+
+    @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
         if (block.getType() == Material.FARMLAND) {
@@ -596,148 +620,6 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                 }
             }
         }
-    }
-
-    private boolean isLog(Material material) {
-        return material.name().endsWith("_LOG") ||
-               material == Material.OAK_WOOD ||
-               material == Material.BIRCH_WOOD ||
-               material == Material.SPRUCE_WOOD ||
-               material == Material.JUNGLE_WOOD ||
-               material == Material.ACACIA_WOOD ||
-               material == Material.DARK_OAK_WOOD ||
-               material == Material.MANGROVE_WOOD ||
-               material == Material.CHERRY_WOOD ||
-               material == Material.BAMBOO_BLOCK ||
-               material == Material.STRIPPED_OAK_LOG ||
-               material == Material.STRIPPED_BIRCH_LOG ||
-               material == Material.STRIPPED_SPRUCE_LOG ||
-               material == Material.STRIPPED_JUNGLE_LOG ||
-               material == Material.STRIPPED_ACACIA_LOG ||
-               material == Material.STRIPPED_DARK_OAK_LOG ||
-               material == Material.STRIPPED_MANGROVE_LOG ||
-               material == Material.STRIPPED_CHERRY_LOG ||
-               material == Material.STRIPPED_BAMBOO_BLOCK ||
-               material == Material.OAK_LOG ||
-               material == Material.BIRCH_LOG ||
-               material == Material.SPRUCE_LOG ||
-               material == Material.JUNGLE_LOG ||
-               material == Material.ACACIA_LOG ||
-               material == Material.DARK_OAK_LOG ||
-               material == Material.MANGROVE_LOG ||
-               material == Material.CHERRY_LOG;
-    }
-
-    private boolean isLeaves(Material material) {
-        return material.name().endsWith("_LEAVES") ||
-               material == Material.OAK_LEAVES ||
-               material == Material.BIRCH_LEAVES ||
-               material == Material.SPRUCE_LEAVES ||
-               material == Material.JUNGLE_LEAVES ||
-               material == Material.ACACIA_LEAVES ||
-               material == Material.DARK_OAK_LEAVES ||
-               material == Material.MANGROVE_LEAVES ||
-               material == Material.CHERRY_LEAVES ||
-               material == Material.AZALEA_LEAVES ||
-               material == Material.FLOWERING_AZALEA_LEAVES;
-    }
-
-    private boolean isNaturalTreeBlock(Block block) {
-        Material type = block.getType();
-        if (!isLog(type) && !isLeaves(type)) {
-            return false;
-        }
-
-        Block below = block.getRelative(0, -1, 0);
-        if (isLog(below.getType()) || below.getType() == Material.GRASS_BLOCK || below.getType() == Material.DIRT) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private Set<Block> findTreeBlocks(Block startBlock) {
-        Set<Block> treeBlocks = new HashSet<>();
-        Set<Block> visited = new HashSet<>();
-        List<Block> toCheck = new ArrayList<>();
-
-        toCheck.add(startBlock);
-
-        while (!toCheck.isEmpty()) {
-            Block current = toCheck.remove(0);
-            if (visited.contains(current)) continue;
-            visited.add(current);
-
-            Material type = current.getType();
-            if (!isLog(type) && !isLeaves(type)) continue;
-
-            if (!isNaturalTreeBlock(current)) continue;
-
-            treeBlocks.add(current);
-
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dy = -1; dy <= 1; dy++) {
-                    for (int dz = -1; dz <= 1; dz++) {
-                        if (dx == 0 && dy == 0 && dz == 0) continue;
-                        Block neighbor = current.getRelative(dx, dy, dz);
-                        if (!visited.contains(neighbor)) {
-                            toCheck.add(neighbor);
-                        }
-                    }
-                }
-            }
-        }
-
-        return treeBlocks;
-    }
-
-    private boolean isGiantTreeTrunk(Block block) {
-        int x = block.getX();
-        int z = block.getZ();
-        int y = block.getY();
-
-        Block block1 = block.getWorld().getBlockAt(x, y, z);
-        Block block2 = block.getWorld().getBlockAt(x + 1, y, z);
-        Block block3 = block.getWorld().getBlockAt(x, y, z + 1);
-        Block block4 = block.getWorld().getBlockAt(x + 1, y, z + 1);
-
-        boolean b1 = isLog(block1.getType());
-        boolean b2 = isLog(block2.getType());
-        boolean b3 = isLog(block3.getType());
-        boolean b4 = isLog(block4.getType());
-
-        return (b1 && b2 && b3 && b4);
-    }
-
-    private Block findLowestLogBlock(Set<Block> treeBlocks) {
-        Block lowest = null;
-        int lowestY = Integer.MAX_VALUE;
-
-        for (Block block : treeBlocks) {
-            if (isLog(block.getType())) {
-                int y = block.getY();
-                if (y < lowestY) {
-                    lowestY = y;
-                    lowest = block;
-                }
-            }
-        }
-
-        return lowest;
-    }
-
-    private Material getSaplingType(Material logType) {
-        String name = logType.name();
-        if (name.contains("OAK")) return Material.OAK_SAPLING;
-        if (name.contains("BIRCH")) return Material.BIRCH_SAPLING;
-        if (name.contains("SPRUCE")) return Material.SPRUCE_SAPLING;
-        if (name.contains("JUNGLE")) return Material.JUNGLE_SAPLING;
-        if (name.contains("ACACIA")) return Material.ACACIA_SAPLING;
-        if (name.contains("DARK_OAK")) return Material.DARK_OAK_SAPLING;
-        if (name.contains("MANGROVE")) return Material.MANGROVE_PROPAGULE;
-        if (name.contains("CHERRY")) return Material.CHERRY_SAPLING;
-        if (name.contains("BAMBOO")) return Material.BAMBOO;
-        return Material.OAK_SAPLING;
     }
 
     @EventHandler
