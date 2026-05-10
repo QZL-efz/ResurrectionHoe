@@ -68,62 +68,80 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                     sender.sendMessage("§a插件配置已重载！");
                     return true;
                 }
-                if (args[0].equalsIgnoreCase("hoe")) {
-                    if (!(sender instanceof Player)) {
-                        sender.sendMessage("只有玩家才能使用此指令！");
+                if (args[0].equalsIgnoreCase("give")) {
+                    if (!sender.hasPermission("resurrectionhoe.give")) {
+                        sender.sendMessage("§c你没有权限执行此指令！");
                         return true;
                     }
-                    Player player = (Player) sender;
-                    if (!player.hasPermission("resurrectionhoe.hoe")) {
-                        player.sendMessage("§c你没有权限执行此指令！");
+                    if (args.length < 2) {
+                        sender.sendMessage("§c用法: /rh give <hoe|fertilizer> [玩家名] [数量]");
                         return true;
                     }
+                    String itemType = args[1].toLowerCase();
+                    if (!itemType.equals("hoe") && !itemType.equals("fertilizer")) {
+                        sender.sendMessage("§c无效的物品类型！请使用 hoe 或 fertilizer");
+                        return true;
+                    }
+                    Player targetPlayer;
                     int amount = 1;
-                    if (args.length > 1) {
-                        try {
-                            amount = Integer.parseInt(args[1]);
-                            if (amount <= 0) {
-                                player.sendMessage("§c数量必须为正整数！");
+                    if (args.length >= 3) {
+                        targetPlayer = getServer().getPlayer(args[2]);
+                        if (targetPlayer == null) {
+                            try {
+                                amount = Integer.parseInt(args[2]);
+                                if (amount <= 0) {
+                                    sender.sendMessage("§c数量必须为正整数！");
+                                    return true;
+                                }
+                                if (!(sender instanceof Player)) {
+                                    sender.sendMessage("§c请指定接收玩家！");
+                                    return true;
+                                }
+                                targetPlayer = (Player) sender;
+                            } catch (NumberFormatException e) {
+                                sender.sendMessage("§c无法找到玩家: " + args[2]);
                                 return true;
                             }
-                        } catch (NumberFormatException e) {
-                            player.sendMessage("§c请输入有效的正整数！");
-                            return true;
-                        }
-                    }
-                    ItemStack hoe = createResurrectionHoe();
-                    hoe.setAmount(amount);
-                    player.getInventory().addItem(hoe);
-                    player.sendMessage("§a你获得了 " + amount + " 个复生之锄！");
-                    return true;
-                }
-                if (args[0].equalsIgnoreCase("fertilizer")) {
-                    if (!(sender instanceof Player)) {
-                        sender.sendMessage("只有玩家才能使用此指令！");
-                        return true;
-                    }
-                    Player player = (Player) sender;
-                    if (!player.hasPermission("resurrectionhoe.fertilizer")) {
-                        player.sendMessage("§c你没有权限执行此指令！");
-                        return true;
-                    }
-                    int amount = 1;
-                    if (args.length > 1) {
-                        try {
-                            amount = Integer.parseInt(args[1]);
-                            if (amount <= 0) {
-                                player.sendMessage("§c数量必须为正整数！");
-                                return true;
+                        } else {
+                            if (args.length >= 4) {
+                                try {
+                                    amount = Integer.parseInt(args[3]);
+                                    if (amount <= 0) {
+                                        sender.sendMessage("§c数量必须为正整数！");
+                                        return true;
+                                    }
+                                } catch (NumberFormatException e) {
+                                    sender.sendMessage("§c请输入有效的正整数！");
+                                    return true;
+                                }
                             }
-                        } catch (NumberFormatException e) {
-                            player.sendMessage("§c请输入有效的正整数！");
+                        }
+                    } else {
+                        if (!(sender instanceof Player)) {
+                            sender.sendMessage("§c请指定接收玩家！");
                             return true;
                         }
+                        targetPlayer = (Player) sender;
                     }
-                    ItemStack fertilizer = createGoldenFertilizer();
-                    fertilizer.setAmount(amount);
-                    player.getInventory().addItem(fertilizer);
-                    player.sendMessage("§a你获得了 " + amount + " 个金坷垃！");
+                    
+                    ItemStack item;
+                    String itemName;
+                    if (itemType.equals("hoe")) {
+                        item = createResurrectionHoe();
+                        itemName = "复生之锄";
+                    } else {
+                        item = createGoldenFertilizer();
+                        itemName = "金坷垃";
+                    }
+                    item.setAmount(amount);
+                    targetPlayer.getInventory().addItem(item);
+                    
+                    if (targetPlayer.equals(sender)) {
+                        sender.sendMessage("§a你获得了 " + amount + " 个" + itemName + "！");
+                    } else {
+                        sender.sendMessage("§a已给 " + targetPlayer.getName() + " " + amount + " 个" + itemName + "！");
+                        targetPlayer.sendMessage("§a你获得了 " + amount + " 个" + itemName + "！");
+                    }
                     return true;
                 }
                 sender.sendMessage("§c未知指令！使用 /rh 查看帮助");
@@ -140,11 +158,15 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                     if (sender.hasPermission("resurrectionhoe.reload")) {
                         completions.add("reload");
                     }
-                    if (sender.hasPermission("resurrectionhoe.hoe")) {
-                        completions.add("hoe");
+                    if (sender.hasPermission("resurrectionhoe.give")) {
+                        completions.add("give");
                     }
-                    if (sender.hasPermission("resurrectionhoe.fertilizer")) {
-                        completions.add("fertilizer");
+                } else if (args.length == 2 && args[0].equalsIgnoreCase("give") && sender.hasPermission("resurrectionhoe.give")) {
+                    completions.add("hoe");
+                    completions.add("fertilizer");
+                } else if (args.length == 3 && args[0].equalsIgnoreCase("give") && sender.hasPermission("resurrectionhoe.give")) {
+                    for (Player player : getServer().getOnlinePlayers()) {
+                        completions.add(player.getName());
                     }
                 }
                 return completions;
@@ -168,8 +190,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         sender.sendMessage("§7  指令:");
         sender.sendMessage("§f  /rh info §7- §f显示插件信息");
         sender.sendMessage("§f  /rh reload §7- §f重载插件（OP）");
-        sender.sendMessage("§f  /rh hoe [数量] §7- §f获得复生之锄（OP）");
-        sender.sendMessage("§f  /rh fertilizer [数量] §7- §f获得金坷垃（OP）");
+        sender.sendMessage("§f  /rh give <hoe|fertilizer> [玩家名] [数量] §7- §f获取物品（OP）");
         sender.sendMessage("§6═══════════════════════════════");
     }
 
@@ -307,8 +328,8 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
             if (grown > 0) {
                 item.setAmount(item.getAmount() - 1);
                 player.getInventory().setItemInMainHand(item);
+                event.setCancelled(true);
             }
-            event.setCancelled(true);
         }
     }
 

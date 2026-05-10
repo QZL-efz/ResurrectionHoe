@@ -24,13 +24,21 @@
 
 ## 🎮 指令
 
-| 指令               | 权限   | 说明     |
-| ---------------- | ---- | ------ |
-| `/rh`            | 所有玩家 | 显示插件信息 |
-| `/rh info`       | 所有玩家 | 显示插件信息 |
-| `/rh reload`     | OP   | 重载插件   |
-| `/rh hoe`        | OP   | 获取复生之锄 |
-| `/rh fertilizer` | OP   | 获取金坷垃  |
+| 指令                                   | 权限   | 说明                |
+| ------------------------------------ | ---- | ----------------- |
+| `/rh`                                | 所有玩家 | 显示插件信息            |
+| `/rh info`                           | 所有玩家 | 显示插件信息            |
+| `/rh reload`                         | OP   | 重载插件              |
+| `/rh give <hoe\|fertilizer> [玩家] [数量]` | OP   | 获取复生之锄或金坷垃（玩家和数量可选） |
+
+### 指令示例
+
+```bash
+/rh give hoe                    # 给自己1个复生之锄
+/rh give fertilizer 5            # 给自己5个金坷垃
+/rh give hoe PlayerName 10      # 给 PlayerName 10个复生之锄
+/rh give fertilizer AnotherName 3  # 给 AnotherName 3个金坷垃
+```
 
 ## 🛠️ 构建
 

@@ -8,7 +8,7 @@ description: 地狱复生之锄插件
 commands:
   resurrectionhoe:
     description: 插件主指令
-    usage: /<command> [info|reload|hoe]
+    usage: /<command> [info|reload|give]
     aliases: [rh]
 
 permissions:
@@ -18,6 +18,6 @@ permissions:
   resurrectionhoe.reload:
     description: 重载插件权限
     default: op
-  resurrectionhoe.hoe:
-    description: 获得地狱复生之锄
+  resurrectionhoe.give:
+    description: 获取复生之锄和金坷垃
     default: op
