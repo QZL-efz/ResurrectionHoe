@@ -28,10 +28,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -40,7 +38,6 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
     private NamespacedKey hoeKey;
     private NamespacedKey fertilizerKey;
     private ConcurrentHashMap<String, Boolean> resurrectionFarmlands;
-    private String buildTime;
     private boolean enableFarmlandMoisture;
 
     @Override
@@ -51,7 +48,6 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         hoeKey = new NamespacedKey(this, "resurrection_hoe");
         fertilizerKey = new NamespacedKey(this, "golden_fertilizer");
         resurrectionFarmlands = new ConcurrentHashMap<>();
-        buildTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
         getLogger().info("ResurrectionHoe 插件已启用！");
         getServer().getPluginManager().registerEvents(this, this);
 
@@ -82,9 +78,23 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                         player.sendMessage("§c你没有权限执行此指令！");
                         return true;
                     }
+                    int amount = 1;
+                    if (args.length > 1) {
+                        try {
+                            amount = Integer.parseInt(args[1]);
+                            if (amount <= 0) {
+                                player.sendMessage("§c数量必须为正整数！");
+                                return true;
+                            }
+                        } catch (NumberFormatException e) {
+                            player.sendMessage("§c请输入有效的正整数！");
+                            return true;
+                        }
+                    }
                     ItemStack hoe = createResurrectionHoe();
+                    hoe.setAmount(amount);
                     player.getInventory().addItem(hoe);
-                    player.sendMessage("§a你获得了复生之锄！");
+                    player.sendMessage("§a你获得了 " + amount + " 个复生之锄！");
                     return true;
                 }
                 if (args[0].equalsIgnoreCase("fertilizer")) {
@@ -97,9 +107,23 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                         player.sendMessage("§c你没有权限执行此指令！");
                         return true;
                     }
+                    int amount = 1;
+                    if (args.length > 1) {
+                        try {
+                            amount = Integer.parseInt(args[1]);
+                            if (amount <= 0) {
+                                player.sendMessage("§c数量必须为正整数！");
+                                return true;
+                            }
+                        } catch (NumberFormatException e) {
+                            player.sendMessage("§c请输入有效的正整数！");
+                            return true;
+                        }
+                    }
                     ItemStack fertilizer = createGoldenFertilizer();
+                    fertilizer.setAmount(amount);
                     player.getInventory().addItem(fertilizer);
-                    player.sendMessage("§a你获得了金坷垃！");
+                    player.sendMessage("§a你获得了 " + amount + " 个金坷垃！");
                     return true;
                 }
                 sender.sendMessage("§c未知指令！使用 /rh 查看帮助");
@@ -139,14 +163,13 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         sender.sendMessage("§e  ResurrectionHoe §f- §a复生之锄");
         sender.sendMessage("");
         sender.sendMessage("§b  版本: §f" + getDescription().getVersion());
-        sender.sendMessage("§b  构建时间: §f" + buildTime);
         sender.sendMessage("§b  耕地不干涸: §f" + (enableFarmlandMoisture ? "§a启用" : "§c禁用"));
         sender.sendMessage("");
         sender.sendMessage("§7  指令:");
         sender.sendMessage("§f  /rh info §7- §f显示插件信息");
         sender.sendMessage("§f  /rh reload §7- §f重载插件（OP）");
-        sender.sendMessage("§f  /rh hoe §7- §f获得复生之锄（OP）");
-        sender.sendMessage("§f  /rh fertilizer §7- §f获得金坷垃（OP）");
+        sender.sendMessage("§f  /rh hoe [数量] §7- §f获得复生之锄（OP）");
+        sender.sendMessage("§f  /rh fertilizer [数量] §7- §f获得金坷垃（OP）");
         sender.sendMessage("§6═══════════════════════════════");
     }
 
@@ -182,8 +205,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                 ChatColor.GRAY + "右键作物使用",
                 ChatColor.GREEN + "可催熟5×3×5范围内的作物"
         ));
-        meta.addEnchant(Enchantment.EFFICIENCY, 5, true);
-        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        meta.addEnchant(Enchantment.EFFICIENCY, 3, true);
         meta.getPersistentDataContainer().set(fertilizerKey, PersistentDataType.BYTE, (byte) 1);
         
         fertilizer.setItemMeta(meta);
