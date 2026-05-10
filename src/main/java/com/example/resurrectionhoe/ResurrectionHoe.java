@@ -36,8 +36,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ResurrectionHoe extends JavaPlugin implements Listener {
 
@@ -359,7 +359,6 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
 
         meta.setDisplayName(ChatColor.GOLD + "百分比之剑");
         List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.GRAY + "基础伤害: 1");
         lore.add(ChatColor.GRAY + "攻击时额外造成");
         lore.add(ChatColor.RED + "目标最大生命值10%");
         lore.add(ChatColor.GRAY + "的伤害！");
@@ -458,6 +457,8 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                material == Material.DARK_OAK_LOG ||
                material == Material.MANGROVE_LOG ||
                material == Material.CHERRY_LOG ||
+               material == Material.CRIMSON_STEM ||
+               material == Material.WARPED_STEM ||
                material == Material.OAK_WOOD ||
                material == Material.BIRCH_WOOD ||
                material == Material.SPRUCE_WOOD ||
@@ -478,6 +479,8 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         if (name.contains("DARK_OAK")) return Material.DARK_OAK_SAPLING;
         if (name.contains("MANGROVE")) return Material.MANGROVE_PROPAGULE;
         if (name.contains("CHERRY")) return Material.CHERRY_SAPLING;
+        if (name.contains("CRIMSON")) return Material.CRIMSON_FUNGUS;
+        if (name.contains("WARPED")) return Material.WARPED_FUNGUS;
         return Material.OAK_SAPLING;
     }
 
