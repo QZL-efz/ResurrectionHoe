@@ -32,12 +32,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
 
 public class ResurrectionHoe extends JavaPlugin implements Listener {
 
     private NamespacedKey hoeKey;
     private NamespacedKey fertilizerKey;
+    private NamespacedKey shovelKey;
     private ConcurrentHashMap<String, Boolean> resurrectionFarmlands;
+    private ConcurrentHashMap<UUID, Long> fertilizerCooldowns;
     private boolean enableFarmlandMoisture;
 
     @Override
@@ -47,7 +50,9 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
 
         hoeKey = new NamespacedKey(this, "resurrection_hoe");
         fertilizerKey = new NamespacedKey(this, "golden_fertilizer");
+        shovelKey = new NamespacedKey(this, "path_shovel");
         resurrectionFarmlands = new ConcurrentHashMap<>();
+        fertilizerCooldowns = new ConcurrentHashMap<>();
         getLogger().info("ResurrectionHoe 插件已启用！");
         getServer().getPluginManager().registerEvents(this, this);
 
@@ -74,12 +79,12 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                         return true;
                     }
                     if (args.length < 2) {
-                        sender.sendMessage("§c用法: /rh give <hoe|fertilizer> [玩家名] [数量]");
+                        sender.sendMessage("§c用法: /rh give <hoe|fertilizer|shovel> [玩家名] [数量]");
                         return true;
                     }
                     String itemType = args[1].toLowerCase();
-                    if (!itemType.equals("hoe") && !itemType.equals("fertilizer")) {
-                        sender.sendMessage("§c无效的物品类型！请使用 hoe 或 fertilizer");
+                    if (!itemType.equals("hoe") && !itemType.equals("fertilizer") && !itemType.equals("shovel")) {
+                        sender.sendMessage("§c无效的物品类型！请使用 hoe, fertilizer 或 shovel");
                         return true;
                     }
                     Player targetPlayer;
@@ -129,6 +134,9 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                     if (itemType.equals("hoe")) {
                         item = createResurrectionHoe();
                         itemName = "复生之锄";
+                    } else if (itemType.equals("shovel")) {
+                        item = createPathShovel();
+                        itemName = "引路之锹";
                     } else {
                         item = createGoldenFertilizer();
                         itemName = "金坷垃";
@@ -164,6 +172,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                 } else if (args.length == 2 && args[0].equalsIgnoreCase("give") && sender.hasPermission("resurrectionhoe.give")) {
                     completions.add("hoe");
                     completions.add("fertilizer");
+                    completions.add("shovel");
                 } else if (args.length == 3 && args[0].equalsIgnoreCase("give") && sender.hasPermission("resurrectionhoe.give")) {
                     for (Player player : getServer().getOnlinePlayers()) {
                         completions.add(player.getName());
@@ -190,7 +199,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         sender.sendMessage("§7  指令:");
         sender.sendMessage("§f  /rh info §7- §f显示插件信息");
         sender.sendMessage("§f  /rh reload §7- §f重载插件（OP）");
-        sender.sendMessage("§f  /rh give <hoe|fertilizer> [玩家名] [数量] §7- §f获取物品（OP）");
+        sender.sendMessage("§f  /rh give <hoe|fertilizer|shovel> [玩家名] [数量] §7- §f获取物品（OP）");
         sender.sendMessage("§6═══════════════════════════════");
     }
 
@@ -222,15 +231,33 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         ItemMeta meta = fertilizer.getItemMeta();
         
         meta.setDisplayName(ChatColor.GOLD + "金坷垃");
-        meta.setLore(Arrays.asList(
-                ChatColor.GRAY + "右键作物使用",
-                ChatColor.GREEN + "可催熟5×3×5范围内的作物"
-        ));
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.GRAY + "右键使用");
+        lore.add(ChatColor.BLUE + "可催熟7×5×7范围内的作物");
+        meta.setLore(lore);
         meta.addEnchant(Enchantment.EFFICIENCY, 3, true);
         meta.getPersistentDataContainer().set(fertilizerKey, PersistentDataType.BYTE, (byte) 1);
         
         fertilizer.setItemMeta(meta);
         return fertilizer;
+    }
+
+    private ItemStack createPathShovel() {
+        ItemStack shovel = new ItemStack(Material.IRON_SHOVEL);
+        ItemMeta meta = shovel.getItemMeta();
+        
+        meta.setDisplayName(ChatColor.GOLD + "引路之锹");
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.GRAY + "右键方块使用");
+        lore.add(ChatColor.BLUE + "可在3×3×3范围内生成土径");
+        meta.setLore(lore);
+        meta.addEnchant(Enchantment.MENDING, 1, true);
+        meta.setUnbreakable(true);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        meta.getPersistentDataContainer().set(shovelKey, PersistentDataType.BYTE, (byte) 1);
+        
+        shovel.setItemMeta(meta);
+        return shovel;
     }
 
     private boolean isResurrectionHoe(ItemStack item) {
@@ -241,6 +268,11 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
     private boolean isGoldenFertilizer(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return false;
         return item.getItemMeta().getPersistentDataContainer().has(fertilizerKey, PersistentDataType.BYTE);
+    }
+
+    private boolean isPathShovel(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return false;
+        return item.getItemMeta().getPersistentDataContainer().has(shovelKey, PersistentDataType.BYTE);
     }
 
     private String getBlockKey(Block block) {
@@ -308,13 +340,21 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
             }
             event.setCancelled(true);
         } else if (isGoldenFertilizer(item)) {
-            Block clickedBlock = event.getClickedBlock();
-            Location center = clickedBlock.getLocation();
+            event.setCancelled(true);
+            
+            UUID playerUUID = player.getUniqueId();
+            long currentTime = System.currentTimeMillis();
+            Long lastUse = fertilizerCooldowns.get(playerUUID);
+            if (lastUse != null && currentTime - lastUse < 1000) {
+                return;
+            }
+            
+            Location center = player.getLocation();
             int grown = 0;
 
-            for (int x = -2; x <= 2; x++) {
-                for (int y = -1; y <= 1; y++) {
-                    for (int z = -2; z <= 2; z++) {
+            for (int x = -3; x <= 3; x++) {
+                for (int y = -2; y <= 2; y++) {
+                    for (int z = -3; z <= 3; z++) {
                         Block block = center.getWorld().getBlockAt(center.getBlockX() + x, center.getBlockY() + y, center.getBlockZ() + z);
                         if (isGrowable(block)) {
                             growCrop(block);
@@ -328,8 +368,36 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
             if (grown > 0) {
                 item.setAmount(item.getAmount() - 1);
                 player.getInventory().setItemInMainHand(item);
-                event.setCancelled(true);
+                fertilizerCooldowns.put(playerUUID, currentTime);
+            } else {
+                fertilizerCooldowns.put(playerUUID, currentTime);
             }
+        } else if (isPathShovel(item)) {
+            Block clickedBlock = event.getClickedBlock();
+            Location center = clickedBlock.getLocation();
+
+            for (int x = -1; x <= 1; x++) {
+                for (int y = -1; y <= 1; y++) {
+                    for (int z = -1; z <= 1; z++) {
+                        Block block = center.getWorld().getBlockAt(center.getBlockX() + x, center.getBlockY() + y, center.getBlockZ() + z);
+                        Material type = block.getType();
+                        
+                        if (type == Material.GRASS_BLOCK || type == Material.DIRT || 
+                            type == Material.COARSE_DIRT || 
+                            type == Material.MYCELIUM || 
+                            type == Material.PODZOL || 
+                            type == Material.ROOTED_DIRT) {
+                            Block above = block.getRelative(0, 1, 0);
+                            Material aboveType = above.getType();
+                            
+                            if (aboveType == Material.AIR) {
+                                block.setType(Material.DIRT_PATH);
+                            }
+                        }
+                    }
+                }
+            }
+            event.setCancelled(true);
         }
     }
 
@@ -379,7 +447,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
 
     private void spawnGrowthParticles(Block block) {
         Location loc = block.getLocation().add(0.5, 0.5, 0.5);
-        block.getWorld().spawnParticle(Particle.HEART, loc, 10, 0.3, 0.3, 0.3, 0.1);
+        block.getWorld().spawnParticle(Particle.HEART, loc, 5, 0.3, 0.3, 0.3, 0.1);
         block.getWorld().playSound(loc, Sound.BLOCK_GRASS_PLACE, 0.5f, 1.0f);
     }
 
