@@ -323,8 +323,8 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
 
         meta.setDisplayName(ChatColor.GOLD + "可再生石斧");
         List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.GRAY + "右键木头方块时");
-        lore.add(ChatColor.GRAY + "直接掉落该木头！");
+        lore.add(ChatColor.GRAY + "右键原木时掉落对应树苗");
+        lore.add(ChatColor.BLUE + "仅支持未削皮的木头！");
         meta.setLore(lore);
         meta.addEnchant(Enchantment.EFFICIENCY, 3, true);
         meta.setUnbreakable(true);
@@ -342,7 +342,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
         meta.setDisplayName(ChatColor.GOLD + "寻觅之镰");
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + "破坏草及其变种时");
-        lore.add(ChatColor.GRAY + "有概率获得额外掉落物！");
+        lore.add(ChatColor.BLUE + "有概率获得额外掉落物！");
         meta.setLore(lore);
         meta.addEnchant(Enchantment.MENDING, 1, true);
         meta.setUnbreakable(true);
@@ -449,8 +449,15 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                material == Material.LARGE_FERN;
     }
 
-    private boolean isLog(Material material) {
-        return material.name().endsWith("_LOG") ||
+    private boolean isUnstrippedLog(Material material) {
+        return material == Material.OAK_LOG ||
+               material == Material.BIRCH_LOG ||
+               material == Material.SPRUCE_LOG ||
+               material == Material.JUNGLE_LOG ||
+               material == Material.ACACIA_LOG ||
+               material == Material.DARK_OAK_LOG ||
+               material == Material.MANGROVE_LOG ||
+               material == Material.CHERRY_LOG ||
                material == Material.OAK_WOOD ||
                material == Material.BIRCH_WOOD ||
                material == Material.SPRUCE_WOOD ||
@@ -458,25 +465,20 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                material == Material.ACACIA_WOOD ||
                material == Material.DARK_OAK_WOOD ||
                material == Material.MANGROVE_WOOD ||
-               material == Material.CHERRY_WOOD ||
-               material == Material.BAMBOO_BLOCK ||
-               material == Material.STRIPPED_OAK_LOG ||
-               material == Material.STRIPPED_BIRCH_LOG ||
-               material == Material.STRIPPED_SPRUCE_LOG ||
-               material == Material.STRIPPED_JUNGLE_LOG ||
-               material == Material.STRIPPED_ACACIA_LOG ||
-               material == Material.STRIPPED_DARK_OAK_LOG ||
-               material == Material.STRIPPED_MANGROVE_LOG ||
-               material == Material.STRIPPED_CHERRY_LOG ||
-               material == Material.STRIPPED_BAMBOO_BLOCK ||
-               material == Material.OAK_LOG ||
-               material == Material.BIRCH_LOG ||
-               material == Material.SPRUCE_LOG ||
-               material == Material.JUNGLE_LOG ||
-               material == Material.ACACIA_LOG ||
-               material == Material.DARK_OAK_LOG ||
-               material == Material.MANGROVE_LOG ||
-               material == Material.CHERRY_LOG;
+               material == Material.CHERRY_WOOD;
+    }
+
+    private Material getSaplingFromLog(Material logType) {
+        String name = logType.name();
+        if (name.contains("OAK")) return Material.OAK_SAPLING;
+        if (name.contains("BIRCH")) return Material.BIRCH_SAPLING;
+        if (name.contains("SPRUCE")) return Material.SPRUCE_SAPLING;
+        if (name.contains("JUNGLE")) return Material.JUNGLE_SAPLING;
+        if (name.contains("ACACIA")) return Material.ACACIA_SAPLING;
+        if (name.contains("DARK_OAK")) return Material.DARK_OAK_SAPLING;
+        if (name.contains("MANGROVE")) return Material.MANGROVE_PROPAGULE;
+        if (name.contains("CHERRY")) return Material.CHERRY_SAPLING;
+        return Material.OAK_SAPLING;
     }
 
     @EventHandler
@@ -534,7 +536,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
             if (clickedBlock == null) return;
 
             Material type = clickedBlock.getType();
-            if (!isLog(type)) {
+            if (!isUnstrippedLog(type)) {
                 return;
             }
 
@@ -542,7 +544,8 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
                 return;
             }
 
-            clickedBlock.getWorld().dropItemNaturally(clickedBlock.getLocation(), new ItemStack(type));
+            Material sapling = getSaplingFromLog(type);
+            clickedBlock.getWorld().dropItemNaturally(clickedBlock.getLocation(), new ItemStack(sapling));
             clickedBlock.setType(Material.AIR);
             clickedBlock.getWorld().spawnParticle(Particle.BLOCK, clickedBlock.getLocation().add(0.5, 0.5, 0.5), 20, 0.3, 0.3, 0.3, 0.05, clickedBlock.getBlockData());
             clickedBlock.getWorld().playSound(clickedBlock.getLocation(), Sound.BLOCK_WOOD_BREAK, 1.0f, 1.0f);
@@ -608,7 +611,7 @@ public class ResurrectionHoe extends JavaPlugin implements Listener {
 
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
-        
+
         if (isSeekersScythe(item) && isGrassVariant(block.getType())) {
             if (random.nextDouble() < scytheDropChance) {
                 LootItem loot = getRandomLoot();
