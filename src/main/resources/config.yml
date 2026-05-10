@@ -4,3 +4,21 @@
 # true - 启用，复生之锄生成的耕地不会干涸
 # false - 禁用，所有耕地行为与普通耕地一致
 enable-farmland-moisture: true
+
+# 寻觅之镰配置
+seekers-scythe:
+  # 掉落概率 (0.0 - 1.0)，默认 0.2
+  drop-chance: 0.2
+  
+  # 战利品表，格式：[物品类型] [物品数量] [权重]
+  # 权重越高，越容易被选中
+  loot-table:
+    - "WHEAT_SEEDS 1 200"
+    - "BEETROOT_SEEDS 1 200"
+    - "CARROT 1 200"
+    - "POTATO 1 200"
+    - "MELON_SEEDS 1 150"
+    - "PUMPKIN_SEEDS 1 150"
+    - "GOLDEN_CARROT 1 10"
+    - "GOLDEN_APPLE 1 5"
+    - "ENCHANTED_GOLDEN_APPLE 1 1"
