@@ -1,0 +1,23 @@
+name: ResurrectionHoe
+version: ${project.version}
+main: com.example.myplugin.MyPlugin
+api-version: '1.21'
+author: YourName
+description: 地狱复生之锄插件
+
+commands:
+  resurrectionhoe:
+    description: 插件主指令
+    usage: /<command> [info|reload|hoe]
+    aliases: [rh]
+
+permissions:
+  resurrectionhoe.info:
+    description: 查看插件信息
+    default: true
+  resurrectionhoe.reload:
+    description: 重载插件权限
+    default: op
+  resurrectionhoe.hoe:
+    description: 获得地狱复生之锄
+    default: op
